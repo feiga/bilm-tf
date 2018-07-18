@@ -523,8 +523,8 @@ class LanguageModel(object):
                 '_reverse')
         # NOTE(feiga): add for multidirectional
         if self.multidirectional:
-            self.next_token_id_permuted1 = _get_next_token_place_holders('_permuted1')
-            self.next_token_id_permuted2 = _get_next_token_place_holders('_permuted2')
+            self.next_token_id_permuted1 = _get_next_token_placeholders('_permuted1')
+            self.next_token_id_permuted2 = _get_next_token_placeholders('_permuted2')
 
         # DEFINE THE SOFTMAX VARIABLES
         # get the dimension of the softmax weights
@@ -968,7 +968,7 @@ def train(options, data, n_gpus, tf_save_dir, tf_log_dir,
 
                 feed_dict.update(
                     _get_feed_dict_from_X(X, start, end, model,
-                                          char_inputs, bidirectional)
+                                          char_inputs, bidirectional, multidirectional)
                 )
 
             # This runs the train_op, summaries and the "final_state_tensors"

@@ -320,15 +320,15 @@ def _permute_list(list, permute_pattern):
                 permuted.append(list[j])
                 j -= 1
     elif permute_pattern == 'outward':
-        i = len(list) / 2
-        j = len(list) / 2 + 1
+        j = int(len(list)/2)
+        i = int(len(list)/2) - 1
         for k in range(0, len(list)):
             if k % 2 == 0:
-                permuted.append(list[i])
-                i -= 1
-            else:
                 permuted.append(list[j])
                 j += 1
+            else:
+                permuted.append(list[i])
+                i -= 1
     else:
         raise ValueError('Pattern error')
     return permuted
@@ -412,6 +412,7 @@ class LMDataset(object):
                 sentences.append(' '.join(splitted))
         # Note(feiga): process the permuted data
         elif self._permuted is not None:
+            sentences = []
             # for sentence in ... :
             for sentence in sentences_raw:
                 splitted = sentence.split()
@@ -505,10 +506,10 @@ class MultidirectionalLMDataset(object):
             shuffle_on_load=shuffle_on_load)
         # TODO(feiga):
         self._data_permuted1 = LMDataset(
-            filepattern, vocab, reverse=False, purmuted='inward', test=test,
+            filepattern, vocab, reverse=False, permuted='inward', test=test,
             shuffle_on_load=shuffle_on_load)
         self._data_permuted2 = LMDataset(
-            filepattern, vocab, reverse=False, purmuted='outward', test=test,
+            filepattern, vocab, reverse=False, permuted='outward', test=test,
             shuffle_on_load=shuffle_on_load)
 
     def iter_batches(self, batch_size, num_steps):
