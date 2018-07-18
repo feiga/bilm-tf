@@ -25,7 +25,7 @@ def print_variable_summary():
     variables = sorted([[v.name, v.get_shape()] for v in tf.global_variables()])
     pprint.pprint(variables)
 
-
+# NOTE(feiga): Training model. 
 class LanguageModel(object):
     '''
     A class to build the tensorflow computational graph for NLMs
@@ -54,7 +54,9 @@ class LanguageModel(object):
     def __init__(self, options, is_training):
         self.options = options
         self.is_training = is_training
+        # NOTE(feiga): add omnidirectional and more options
         self.bidirectional = options.get('bidirectional', False)
+        self.multidirectional = options.get('multidirectional', False)
 
         # use word or char inputs?
         self.char_inputs = 'char_cnn' in self.options
@@ -93,6 +95,8 @@ class LanguageModel(object):
 
         # if a bidirectional LM then make placeholders for reverse
         # model and embeddings
+        # NOTE(feiga): if a omnidirectional LM then make placeholder
+        #              for permuted model and embeddings
         if self.bidirectional:
             self.token_ids_reverse = tf.placeholder(DTYPE_INT,
                                shape=(batch_size, unroll_steps),
@@ -100,6 +104,19 @@ class LanguageModel(object):
             with tf.device("/cpu:0"):
                 self.embedding_reverse = tf.nn.embedding_lookup(
                     self.embedding_weights, self.token_ids_reverse)
+        # Note(feiga):
+        if self.multidirectional:
+             self.token_ids_permuted1 = tf.placeholder(DTYPE_INT,
+                               shape=(batch_size, unroll_steps),
+                               name='token_ids_permuted1')
+             self.token_ids_permuted2 = tf.placeholder(DTYPE_INT,
+                               shape=(batch_size, unroll_steps),
+                               name='token_ids_permuted2')
+             with tf.device("/cpu:0"):
+                self.embedding_permuted1 = tf.nn.embedding_lookup(
+                    self.embedding_weights, self.token_ids_permuted1)
+                self.embedding_permuted2 = tf.nn.embedding_lookup(
+                    self.embedding_weights, self.token_ids_permuted2)
 
     def _build_word_char_embeddings(self):
         '''
@@ -165,6 +182,18 @@ class LanguageModel(object):
                                    name='tokens_characters_reverse')
                 self.char_embedding_reverse = tf.nn.embedding_lookup(
                     self.embedding_weights, self.tokens_characters_reverse)
+            # NOTE(feiga): add for multidirectional
+            if self.multidirectional:
+                self.tokens_characters_permuted1 = tf.placeholder(DTYPE_INT,
+                                   shape=(batch_size, unroll_steps, max_chars),
+                                   name='tokens_characters_permuted1')
+                self.char_embedding_permuted1 = tf.nn.embedding_lookup(
+                    self.embedding_weights, self.tokens_characters_permuted1)
+                self.tokens_characters_permuted2 = tf.placeholder(DTYPE_INT,
+                                   shape=(batch_size, unroll_steps, max_chars),
+                                   name='tokens_characters_permuted2')
+                self.char_embedding_permuted2 = tf.nn.embedding_lookup(
+                    self.embedding_weights, self.tokens_characters_permuted2)
 
 
         # the convolutions
@@ -225,6 +254,12 @@ class LanguageModel(object):
             # re-use the CNN weights from forward pass
             embedding_reverse = make_convolutions(
                 self.char_embedding_reverse, True)
+        # NOTE(feiga): add for multidirectional
+        if self.multidirectional:
+            embedding_permuted1 = make_convolutions(
+                self.char_embedding_permuted1, True)
+            embedding_permuted2 = make_convolutions(
+                self.char_embedding_permuted2, True)
 
         # for highway and projection layers:
         #   reshape from (batch_size, n_tokens, dim) to
@@ -236,6 +271,12 @@ class LanguageModel(object):
             embedding = tf.reshape(embedding, [-1, n_filters])
             if self.bidirectional:
                 embedding_reverse = tf.reshape(embedding_reverse,
+                    [-1, n_filters])
+            # NOTE(feiga): add for multidirectional
+            if self.multidirectional:
+                embedding_permuted1 = tf.reshape(embedding_permuted1,
+                    [-1, n_filters])
+                embedding_permuted2 = tf.reshape(embedding_permuted2,
                     [-1, n_filters])
 
         # set up weights for projection
@@ -289,6 +330,15 @@ class LanguageModel(object):
                     embedding_reverse = high(embedding_reverse,
                                              W_carry, b_carry,
                                              W_transform, b_transform)
+                # NOTE(feiga): add for multidirectional
+                if self.multidirectional:
+                    embedding_permuted1 = high(embedding_permuted1,
+                                             W_carry, b_carry,
+                                             W_transform, b_transform)
+                    embedding_permuted2 = high(embedding_permuted2,
+                                             W_carry, b_carry,
+                                             W_transform, b_transform)
+                
                 self.token_embedding_layers.append(
                     tf.reshape(embedding, 
                         [batch_size, unroll_steps, highway_dim])
@@ -300,6 +350,13 @@ class LanguageModel(object):
             if self.bidirectional:
                 embedding_reverse = tf.matmul(embedding_reverse, W_proj_cnn) \
                     + b_proj_cnn
+            # NOTE(feiga): add for multidirectional
+            if self.multidirectional:
+                embedding_permuted1 = tf.matmul(embedding_permuted1, W_proj_cnn) \
+                    + b_proj_cnn
+                embedding_permuted2 = tf.matmul(embedding_permuted2, W_proj_cnn) \
+                    + b_proj_cnn
+
             self.token_embedding_layers.append(
                 tf.reshape(embedding,
                         [batch_size, unroll_steps, projection_dim])
@@ -311,11 +368,19 @@ class LanguageModel(object):
             embedding = tf.reshape(embedding, shp)
             if self.bidirectional:
                 embedding_reverse = tf.reshape(embedding_reverse, shp)
+            # NOTE(feiga): add for multidirectional
+            if self.multidirectional:
+                embedding_permuted1 = tf.reshape(embedding_permuted1, shp)
+                embedding_permuted2 = tf.reshape(embedding_permuted2, shp)
 
         # at last assign attributes for remainder of the model
         self.embedding = embedding
         if self.bidirectional:
             self.embedding_reverse = embedding_reverse
+        # NOTE(feiga): add for multidirectional
+        if self.multidirectional:
+            self.embedding_permuted1 = embedding_permuted1
+            self.embedding_permuted2 = embedding_permuted2
 
     def _build(self):
         # size of input options
@@ -342,7 +407,10 @@ class LanguageModel(object):
         self.final_lstm_state = []
 
         # get the LSTM inputs
-        if self.bidirectional:
+        # NOTE(feiga): add for multidirectional
+        if self.multidirectional and self.bidirectional:
+            lstm_inputs = [self.embedding, self.embedding_reverse, self.embedding_permuted1, self.embedding_permuted2]
+        elif self.bidirectional:
             lstm_inputs = [self.embedding, self.embedding_reverse]
         else:
             lstm_inputs = [self.embedding]
@@ -395,9 +463,12 @@ class LanguageModel(object):
             with tf.control_dependencies([lstm_input]):
                 self.init_lstm_state.append(
                     lstm_cell.zero_state(batch_size, DTYPE))
+
+                # NOTE(feiga): add for multidirectional
+      
                 # NOTE: this variable scope is for backward compatibility
                 # with existing models...
-                if self.bidirectional:
+                if self.bidirectional or self.multidirectional:
                     with tf.variable_scope('RNN_%s' % lstm_num):
                         _lstm_output_unpacked, final_state = tf.nn.static_rnn(
                             lstm_cell,
@@ -450,6 +521,10 @@ class LanguageModel(object):
         if self.bidirectional:
             self.next_token_id_reverse = _get_next_token_placeholders(
                 '_reverse')
+        # NOTE(feiga): add for multidirectional
+        if self.multidirectional:
+            self.next_token_id_permuted1 = _get_next_token_place_holders('_permuted1')
+            self.next_token_id_permuted2 = _get_next_token_place_holders('_permuted2')
 
         # DEFINE THE SOFTMAX VARIABLES
         # get the dimension of the softmax weights
@@ -480,7 +555,10 @@ class LanguageModel(object):
         # loss for each direction of the LSTM
         self.individual_losses = []
 
-        if self.bidirectional:
+        # NOTE(feiga): add for multidirectional
+        if self.multidirectional and self.bidirectional:
+            next_ids = [self.next_token_id, self.next_token_id_reverse, self.next_token_id_permuted1, self.next_token_id_permuted2]
+        elif self.bidirectional:
             next_ids = [self.next_token_id, self.next_token_id_reverse]
         else:
             next_ids = [self.next_token_id]
@@ -517,6 +595,11 @@ class LanguageModel(object):
             self.individual_losses.append(tf.reduce_mean(losses))
 
         # now make the total loss -- it's the mean of the individual losses
+        if self.bidirectional and self.multidirectional:
+            self.total_loss = 0.25 * (self.individual_losses[0]
+                                    + self.individual_losses[1]
+                                    + self.individual_losses[2]
+                                    + self.individual_losses[3])
         if self.bidirectional:
             self.total_loss = 0.5 * (self.individual_losses[0]
                                     + self.individual_losses[1])
@@ -637,7 +720,8 @@ def _deduplicate_indexed_slices(values, indices):
     return (summed_values, unique_indices)
 
 
-def _get_feed_dict_from_X(X, start, end, model, char_inputs, bidirectional):
+# NOTE(feiga): add multidirectional
+def _get_feed_dict_from_X(X, start, end, model, char_inputs, bidirectional, multidirectional):
     feed_dict = {}
     if not char_inputs:
         token_ids = X['token_ids'][start:end]
@@ -654,11 +738,26 @@ def _get_feed_dict_from_X(X, start, end, model, char_inputs, bidirectional):
         else:
             feed_dict[model.tokens_characters_reverse] = \
                 X['tokens_characters_reverse'][start:end]
-
+    # NOTE(feiga)
+    if multidirectional:
+        if not char_inputs:
+            feed_dict[model.token_ids_permuted1] = \
+                X['token_ids_permuted1'][start:end]
+            feed_dict[model.token_ids_permuted2] = \
+                X['token_ids_permuted2'][start:end]
+        else:
+            feed_dict[model.tokens_characters_permuted1] = \
+                X['tokens_characters_permuted1'][start:end]
+            feed_dict[model.tokens_characters_permuted2] = \
+                X['tokens_characters_permuted2'][start:end]
     # now the targets with weights
     next_id_placeholders = [[model.next_token_id, '']]
     if bidirectional:
         next_id_placeholders.append([model.next_token_id_reverse, '_reverse'])
+
+    if multidirectional:
+        next_id_placeholders.append([model.next_token_id_permuted1, '_permuted1'])
+        next_id_placeholders.append([model.next_token_id_permuted2, '_permuted2'])
 
     for id_placeholder, suffix in next_id_placeholders:
         name = 'next_token_id' + suffix
@@ -757,6 +856,7 @@ def train(options, data, n_gpus, tf_save_dir, tf_log_dir,
 
     # do the training loop
     bidirectional = options.get('bidirectional', False)
+    multidirectional = options.get('multidirectional', False)
     with tf.Session(config=tf.ConfigProto(
             allow_soft_placement=True)) as sess:
         sess.run(init)
@@ -821,6 +921,31 @@ def train(options, data, n_gpus, tf_save_dir, tf_log_dir,
             else:
                 feed_dict.update({
                     model.tokens_characters_reverse:
+                        np.zeros([batch_size, unroll_steps, max_chars],
+                                 dtype=np.int32)
+                    for model in models
+                })
+        if multidirectional:
+            if not char_inputs:
+                feed_dict.update({
+                    model.token_ids_permuted1:
+                        np.zeros([batch_size, unroll_steps], dtype=np.int64)
+                    for model in models
+                })
+                feed_dict.update({
+                    model.token_ids_permuted2:
+                        np.zeros([batch_size, unroll_steps], dtype=np.int64)
+                    for model in models
+                })
+            else:
+                feed_dict.update({
+                    model.tokens_characters_permuted1:
+                        np.zeros([batch_size, unroll_steps, max_chars],
+                                 dtype=np.int32)
+                    for model in models
+                })
+                feed_dict.update({
+                    model.tokens_characters_permuted2:
                         np.zeros([batch_size, unroll_steps, max_chars],
                                  dtype=np.int32)
                     for model in models
@@ -953,6 +1078,7 @@ def test(options, ckpt_file, data, batch_size=256):
     '''
 
     bidirectional = options.get('bidirectional', False)
+    multidirectional = options.get('multidirectional', False)
     char_inputs = 'char_cnn' in options
     if char_inputs:
         max_chars = options['char_cnn']['max_characters_per_token']
@@ -985,6 +1111,15 @@ def test(options, ckpt_file, data, batch_size=256):
                 feed_dict.update({
                     model.token_ids_reverse:
                         np.zeros([batch_size, unroll_steps], dtype=np.int64)
+                })
+            if multidirectional:
+                feed_dict.update({
+                    model.token_ids_permuted1:
+                        np.zeros([batch_size, unroll_steps], dtype=np.int64)
+                })
+                feed_dict.update({
+                    model.token_ids_permuted2:
+                        np.zeros([batch_size, unroll_steps], dtype=np.int64)
                 })  
         else:
             feed_dict = {
@@ -995,6 +1130,17 @@ def test(options, ckpt_file, data, batch_size=256):
             if bidirectional:
                 feed_dict.update({
                     model.tokens_characters_reverse:
+                        np.zeros([batch_size, unroll_steps, max_chars],
+                            dtype=np.int32)
+                })
+            if multidirectional:
+                feed_dict.update({
+                    model.tokens_characters_permuted1:
+                        np.zeros([batch_size, unroll_steps, max_chars],
+                            dtype=np.int32)
+                })
+                feed_dict.update({
+                    model.tokens_characters_permuted2:
                         np.zeros([batch_size, unroll_steps, max_chars],
                             dtype=np.int32)
                 })
@@ -1016,7 +1162,7 @@ def test(options, ckpt_file, data, batch_size=256):
 
             feed_dict.update(
                 _get_feed_dict_from_X(X, 0, X['token_ids'].shape[0], model, 
-                                          char_inputs, bidirectional)
+                                          char_inputs, bidirectional, multidirectional)
             )
 
             ret = sess.run(

@@ -306,6 +306,34 @@ def _get_batch(generator, batch_size, num_steps, max_word_length):
 
         yield X
 
+# TODO(permute list for a sequence)
+def _permute_list(list, permute_pattern):
+    permuted = []
+    if permute_pattern == 'inward':
+        i = 0
+        j = len(list)-1
+        for k in range(0, len(list)):
+            if k % 2 == 0:
+                permuted.append(list[i])
+                i += 1
+            else:
+                permuted.append(list[j])
+                j -= 1
+    elif permute_pattern == 'outward':
+        i = len(list) / 2
+        j = len(list) / 2 + 1
+        for k in range(0, len(list)):
+            if k % 2 == 0:
+                permuted.append(list[i])
+                i -= 1
+            else:
+                permuted.append(list[j])
+                j += 1
+    else:
+        raise ValueError('Pattern error')
+    return permuted
+
+
 class LMDataset(object):
     """
     Hold a language model dataset.
@@ -313,7 +341,8 @@ class LMDataset(object):
     A dataset is a list of tokenized files.  Each file contains one sentence
         per line.  Each sentence is pre-tokenized and white space joined.
     """
-    def __init__(self, filepattern, vocab, reverse=False, test=False,
+    # NOTE(feiga): add param permuted, like the reverse
+    def __init__(self, filepattern, vocab, reverse=False, permuted=None, test=False,
                  shuffle_on_load=False):
         '''
         filepattern = a glob string that specifies the list of files.
@@ -329,6 +358,7 @@ class LMDataset(object):
         self._shards_to_choose = []
 
         self._reverse = reverse
+        self._permuted = permuted
         self._test = test
         self._shuffle_on_load = shuffle_on_load
         self._use_char_inputs = hasattr(vocab, 'encode_chars')
@@ -380,9 +410,16 @@ class LMDataset(object):
                 splitted = sentence.split()
                 splitted.reverse()
                 sentences.append(' '.join(splitted))
+        # Note(feiga): process the permuted data
+        elif self._permuted is not None:
+            # for sentence in ... :
+            for sentence in sentences_raw:
+                splitted = sentence.split()
+                permuted = _permute_list(splitted, self._permuted)
+                sentences.append(' '.join(permuted))
         else:
             sentences = sentences_raw
-
+        
         if self._shuffle_on_load:
             random.shuffle(sentences)
 
@@ -450,6 +487,55 @@ class BidirectionalLMDataset(object):
 
             for k, v in Xr.items():
                 X[k + '_reverse'] = v
+
+            yield X
+
+# NOTE(feiga): Dataset for more directions beyond bidirectionial lstm
+class MultidirectionalLMDataset(object):
+    def __init__(self, filepattern, vocab, test=False, shuffle_on_load=False):
+        '''
+        multidirectional version of LMDataset
+        '''
+        # NOTE(feiga): More dataset
+        self._data_forward = LMDataset(
+            filepattern, vocab, reverse=False, test=test,
+            shuffle_on_load=shuffle_on_load)
+        self._data_reverse = LMDataset(
+            filepattern, vocab, reverse=True, test=test,
+            shuffle_on_load=shuffle_on_load)
+        # TODO(feiga):
+        self._data_permuted1 = LMDataset(
+            filepattern, vocab, reverse=False, purmuted='inward', test=test,
+            shuffle_on_load=shuffle_on_load)
+        self._data_permuted2 = LMDataset(
+            filepattern, vocab, reverse=False, purmuted='outward', test=test,
+            shuffle_on_load=shuffle_on_load)
+
+    def iter_batches(self, batch_size, num_steps):
+        max_word_length = self._data_forward.max_word_length
+
+        # NOTE(feiga): get batches from every datasets
+        # TODO(feiga): for X, Xr, Xp1, Xp2...
+        for X, Xr, Xp1, Xp2 in zip(
+            _get_batch(self._data_forward.get_sentence(), batch_size,
+                      num_steps, max_word_length),
+            _get_batch(self._data_reverse.get_sentence(), batch_size,
+                      num_steps, max_word_length),
+            # Note(feiga):
+            # add for permuted data
+            _get_batch(self._data_permuted1.get_sentence(), batch_size, 
+                      num_steps, max_word_length),
+            _get_batch(self._data_permuted2.get_sentence(), batch_size, 
+                     num_steps, max_word_length)
+            ):
+
+            # TODO(feiga): for X, Xr, Xp1, Xp2...
+            for k, v in Xr.items():
+                X[k + '_reverse'] = v
+            for k, v in Xp1.items():
+                X[k + '_permuted1'] = v
+            for k, v in Xp2.items():
+                X[k + '_permuted2'] = v
 
             yield X
 
