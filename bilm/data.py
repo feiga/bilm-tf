@@ -41,6 +41,39 @@ class Vocabulary(object):
                 self._id_to_word.append(word_name)
                 self._word_to_id[word_name] = idx
                 idx += 1
+        
+        # NOTE(feiga): add special token for permuted direction
+        # <MIDDLE> <SIDE> is for "inward" "outward" directions
+        # For example, a source sequence is "1,2,3,4,5,6"
+        # "inward ": permuted sequence: "<S> 1 6 2 5 3 4 <MIDDLE>"
+        # "outward": permuted sequence: "<MIDDLE> 3 4 2 5 1 6 <SIDE>"
+        word_name = "<MD>"
+        self._mos = idx # mos means "middle of sentence"
+        self._id_to_word.append(word_name)
+        self._word_to_id[word_name] = idx
+        idx += 1
+
+        word_name = "<SI>"
+        self._sos = idx # sos means "side of sentence"
+        self._id_to_word.append(word_name)
+        self._word_to_id[word_name] = idx
+        idx += 1
+
+        # <SkipBEGIN> <SkipEND> is for "skip forward/backward" directions
+        # For example, a source sequencen is "1,2,3,4,5"
+        # "Skip 2 forward ": permuted sequence: "<S> 1 3 5 2 4 <SkipEND>"
+        # "Skip 2 backward": permuted sequence: "</S> 5 3 1 4 2 <SkipBEGIN>"
+        word_name = "<Sk>"
+        self._skip_bos = idx # skip_bos means "Skip permuted begin of sentence"
+        self._id_to_word.append(word_name)
+        self._word_to_id[word_name] = idx
+        idx += 1
+
+        word_name = "</Sk>"
+        self._skip_eos = idx # skip_eos means "Skip permuted end of sentence"
+        self._id_to_word.append(word_name)
+        self._word_to_id[word_name] = idx
+        idx += 1
 
         # check to ensure file has special tokens
         if validate_file:
@@ -61,6 +94,14 @@ class Vocabulary(object):
         return self._unk
 
     @property
+    def sos(self):
+        return self._sos
+
+    @property
+    def mos(self):
+        return self._mos
+
+    @property
     def size(self):
         return len(self._id_to_word)
 
@@ -76,7 +117,7 @@ class Vocabulary(object):
         """Convert a list of ids to a sentence, with space inserted."""
         return ' '.join([self.id_to_word(cur_id) for cur_id in cur_ids])
 
-    def encode(self, sentence, reverse=False, split=True):
+    def encode(self, sentence, reverse=False, permuted=None, split=True):
         """Convert a sentence to a list of ids, with special tokens added.
         Sentence is a single string with tokens separated by whitespace.
 
@@ -93,7 +134,15 @@ class Vocabulary(object):
         if reverse:
             return np.array([self.eos] + word_ids + [self.bos], dtype=np.int32)
         else:
-            return np.array([self.bos] + word_ids + [self.eos], dtype=np.int32)
+            if permuted is not None:
+                if permuted == 'inward':
+                    return np.array([self.sos] + word_ids + [self.mos], dtype=np.int32)
+                elif permuted == 'inward':
+                    return np.array([self.mos] + word_ids + [self.sos], dtype=np.int32)
+                else:
+                    raise ValueError("Not implemented")
+            else:
+                return np.array([self.bos] + word_ids + [self.eos], dtype=np.int32)
 
 
 class UnicodeCharsVocabulary(Vocabulary):

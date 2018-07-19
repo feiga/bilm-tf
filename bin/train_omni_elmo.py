@@ -39,10 +39,10 @@ def main(args):
     
      'lstm': {
       'cell_clip': 3,
-      'dim': 4096,
+      'dim': 2048, # NOTE(feiga): halved dimensions comparing with ELMo
       'n_layers': 2,
       'proj_clip': 3,
-      'projection_dim': 512,
+      'projection_dim': 256, # NOTE(feiga): halved dimensions comparing with ELMo
       'use_skip_connections': True},
     
      'all_clip_norm_val': 10.0,
