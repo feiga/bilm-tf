@@ -137,7 +137,7 @@ class Vocabulary(object):
             if permuted is not None:
                 if permuted == 'inward':
                     return np.array([self.sos] + word_ids + [self.mos], dtype=np.int32)
-                elif permuted == 'inward':
+                elif permuted == 'outward':
                     return np.array([self.mos] + word_ids + [self.sos], dtype=np.int32)
                 else:
                     raise ValueError("Not implemented")
@@ -473,7 +473,7 @@ class LMDataset(object):
         if self._shuffle_on_load:
             random.shuffle(sentences)
 
-        ids = [self.vocab.encode(sentence, self._reverse)
+        ids = [self.vocab.encode(sentence, self._reverse, self._permuted)
                for sentence in sentences]
         if self._use_char_inputs:
             chars_ids = [self.vocab.encode_chars(sentence, self._reverse)
