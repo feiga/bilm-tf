@@ -1236,13 +1236,13 @@ def train(options, data, n_gpus, tf_save_dir, tf_log_dir, permute_number=4,
                         for model in models
                     })
                     feed_dict.update({
-                        model.tokens_characters_permuted3:
+                        model.tokens_characters_permuted5:
                             np.zeros([batch_size, unroll_steps, max_chars],
                                      dtype=np.int32)
                         for model in models
                     })
                     feed_dict.update({
-                        model.tokens_characters_permuted4:
+                        model.tokens_characters_permuted6:
                             np.zeros([batch_size, unroll_steps, max_chars],
                                      dtype=np.int32)
                         for model in models
