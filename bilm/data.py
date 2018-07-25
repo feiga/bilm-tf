@@ -43,34 +43,58 @@ class Vocabulary(object):
                 idx += 1
         
         # NOTE(feiga): add special token for permuted direction
-        # <MIDDLE> <SIDE> is for "inward" "outward" directions
+        # <MD: MIDDLE> <SI: SIDE> is for "inward" "outward" directions
         # For example, a source sequence is "1,2,3,4,5,6"
-        # "inward ": permuted sequence: "<S> 1 6 2 5 3 4 <MIDDLE>"
+        # "inward ": permuted sequence: "<SIDE> 1 6 2 5 3 4 <MIDDLE>"
         # "outward": permuted sequence: "<MIDDLE> 3 4 2 5 1 6 <SIDE>"
         word_name = "<MD>"
-        self._mos = idx # mos means "middle of sentence"
+        self._mos = idx  # mos means "middle of sentence"
         self._id_to_word.append(word_name)
         self._word_to_id[word_name] = idx
         idx += 1
 
         word_name = "<SI>"
-        self._sos = idx # sos means "side of sentence"
+        self._sos = idx  # sos means "side of sentence"
         self._id_to_word.append(word_name)
         self._word_to_id[word_name] = idx
         idx += 1
 
-        # <SkipBEGIN> <SkipEND> is for "skip forward/backward" directions
+        # <S2S: skip2start> <S2E: skip2end> is for "skip forward/backward" directions
+        # Mainly to capture the phrase information (2-gram)
         # For example, a source sequencen is "1,2,3,4,5"
-        # "Skip 2 forward ": permuted sequence: "<S> 1 3 5 2 4 <SkipEND>"
-        # "Skip 2 backward": permuted sequence: "</S> 5 3 1 4 2 <SkipBEGIN>"
-        word_name = "<Sk>"
-        self._skip_bos = idx # skip_bos means "Skip permuted begin of sentence"
+        # "Skip 2 forward ": permuted sequence: "<S2S> 1 3 5 2 4 <S2E>"
+        # "Skip 2 backward": permuted sequence: "<S2E> 5 3 1 4 2 <S2S>"
+        # For example, a source sequencen is "1,2,3,4,5,6"
+        # "Skip 2 forward ": permuted sequence: "<S2S> 1 3 5 2 4 6 <S2E>"
+        # "Skip 2 backward": permuted sequence: "<S2E> 6 4 2 5 3 1 <S2S>"
+        word_name = "<S2S>"
+        self._s2s = idx  # skip_bos means "Skip permuted begin of sentence"
         self._id_to_word.append(word_name)
         self._word_to_id[word_name] = idx
         idx += 1
 
-        word_name = "</Sk>"
-        self._skip_eos = idx # skip_eos means "Skip permuted end of sentence"
+        word_name = "<S2E>"
+        self._s2e = idx  # skip_eos means "Skip permuted end of sentence"
+        self._id_to_word.append(word_name)
+        self._word_to_id[word_name] = idx
+        idx += 1
+
+        # <S3S: skip3start> <S3E: skip3end> is for "skip forward/backward" directions
+        # Mainly to capture the phrase information (3-gram)
+        # For example, a source sequencen is "1,2,3,4,5"
+        # "Skip 3 forward ": permuted sequence: "<S3S> 1 4 2 5 3 <S3E>" ?
+        # "Skip 3 backward": permuted sequence: "<S3E> 5 2 4 1 3 <S3S>" ?
+        # For example, a source sequencen is "1,2,3,4,5,6"
+        # "Skip 3 forward ": permuted sequence: "<S3S> 1 4 2 5 3 6 <S3E>"
+        # "Skip 3 backward": permuted sequence: "<S3E> 6 3 5 2 4 1 <S3S>"
+        word_name = "<S3S>"
+        self._s3s = idx  # skip_bos means "Skip permuted begin of sentence"
+        self._id_to_word.append(word_name)
+        self._word_to_id[word_name] = idx
+        idx += 1
+
+        word_name = "<S3E>"
+        self._s3e = idx  # skip_eos means "Skip permuted end of sentence"
         self._id_to_word.append(word_name)
         self._word_to_id[word_name] = idx
         idx += 1
@@ -100,6 +124,22 @@ class Vocabulary(object):
     @property
     def mos(self):
         return self._mos
+
+    @property
+    def s2s(self):
+        return self._s2s
+
+    @property
+    def s2e(self):
+        return self._s2e
+
+    @property
+    def s3s(self):
+        return self._s3s
+
+    @property
+    def s3e(self):
+        return self._s3e
 
     @property
     def size(self):
@@ -166,7 +206,13 @@ class UnicodeCharsVocabulary(Vocabulary):
         self.eos_char = 257  # <end sentence>
         self.bow_char = 258  # <begin word>
         self.eow_char = 259  # <end word>
-        self.pad_char = 260 # <padding>
+        self.pad_char = 260  # <padding>
+        self.mos_char = 261  # <middle of sentence>
+        self.sos_char = 262  # <side of sentence>: similar to the start of the sentence
+        self.s2s_char = 263  # <skip2start>
+        self.s2e_char = 264  # <skip2end>
+        self.s3s_char = 265  # <skip3start>
+        self.s3e_char = 266  # <skip3end>
 
         num_words = len(self._id_to_word)
 
@@ -183,12 +229,24 @@ class UnicodeCharsVocabulary(Vocabulary):
             return r
         self.bos_chars = _make_bos_eos(self.bos_char)
         self.eos_chars = _make_bos_eos(self.eos_char)
+        self.mos_chars = _make_bos_eos(self.mos_char)
+        self.sos_chars = _make_bos_eos(self.sos_char)
+        self.s2s_chars = _make_bos_eos(self.s2s_char)
+        self.s2e_chars = _make_bos_eos(self.s2e_char)
+        self.s3s_chars = _make_bos_eos(self.s3s_char)
+        self.s3e_chars = _make_bos_eos(self.s3e_char)
 
         for i, word in enumerate(self._id_to_word):
             self._word_char_ids[i] = self._convert_word_to_char_ids(word)
 
         self._word_char_ids[self.bos] = self.bos_chars
         self._word_char_ids[self.eos] = self.eos_chars
+        self._word_char_ids[self.mos] = self.mos_chars
+        self._word_char_ids[self.sos] = self.sos_chars
+        self._word_char_ids[self.s2s] = self.s2s_chars
+        self._word_char_ids[self.s2e] = self.s2e_chars
+        self._word_char_ids[self.s3s] = self.s3s_chars
+        self._word_char_ids[self.s3e] = self.s3e_chars
         # TODO: properly handle <UNK>
 
     @property
@@ -217,7 +275,7 @@ class UnicodeCharsVocabulary(Vocabulary):
         else:
             return self._convert_word_to_char_ids(word)
 
-    def encode_chars(self, sentence, reverse=False, split=True):
+    def encode_chars(self, sentence, reverse=False, permuted=False, split=True):
         '''
         Encode the sentence as a white space delimited string of tokens.
         '''
@@ -230,7 +288,23 @@ class UnicodeCharsVocabulary(Vocabulary):
         if reverse:
             return np.vstack([self.eos_chars] + chars_ids + [self.bos_chars])
         else:
-            return np.vstack([self.bos_chars] + chars_ids + [self.eos_chars])
+            if permuted is not None:
+                if permuted == 'inward':
+                    return np.vstack([self.sos_chars] + chars_ids + [self.mos_chars])
+                elif permuted == 'outward':
+                    return np.vstack([self.mos_chars] + chars_ids + [self.sos_chars])
+                elif permuted == "skip2forward":
+                    return np.vstack([self.s2s_chars] + chars_ids + [self.s2e_chars])
+                elif permuted == "skip2backward":
+                    return np.vstack([self.s2e_chars] + chars_ids + [self.s2s_chars])
+                elif permuted == "skip3forward":
+                    return np.vstack([self.s3s_chars] + chars_ids + [self.s3e_chars])
+                elif permuted == "skip3backward":
+                    return np.vstack([self.s3e_chars] + chars_ids + [self.s3s_chars])
+                else:
+                    raise ValueError("Not implemented")
+            else:
+                return np.vstack([self.bos_chars] + chars_ids + [self.eos_chars])
 
 
 class Batcher(object):
@@ -355,6 +429,7 @@ def _get_batch(generator, batch_size, num_steps, max_word_length):
 
         yield X
 
+
 # TODO(permute list for a sequence)
 def _permute_list(list, permute_pattern):
     permuted = []
@@ -378,6 +453,40 @@ def _permute_list(list, permute_pattern):
             else:
                 permuted.append(list[i])
                 i -= 1
+    elif permute_pattern == "skip2forward":
+        i = 0
+        j = 1
+        for k in range(i, len(list), 2):
+            permuted.append(list[k])
+        for k in range(j, len(list), 2):
+            permuted.append(k)
+    elif permute_pattern == "skip2backward":
+        i = len(list) - 1
+        j = len(list) - 2
+        for k in range(i, -1, -2):
+            permuted.append(list[k])
+        for k in range(j, -1, -2):
+            permuted.append(list[k])
+    elif permute_pattern == "skip3forward":
+        i = 0
+        j = 1
+        k = 2
+        for m in range(i, len(list), 3):
+            permuted.append(list[m])
+        for m in range(j, len(list), 3):
+            permuted.append(list[m])
+        for m in range(k, len(list), 3):
+            permuted.append(list[m])
+    elif permute_pattern == "skip3backward":
+        i = len(list) - 1
+        j = len(list) - 2
+        k = len(list) - 3
+        for m in range(i, -1, -3):
+            permuted.append(list[i])
+        for m in range(j, -1, -3):
+            permuted.append(list[m])
+        for m in range(k, -1, -3):
+            permuted.append(list[m])
     else:
         raise ValueError('Pattern error')
     return permuted
@@ -476,7 +585,7 @@ class LMDataset(object):
         ids = [self.vocab.encode(sentence, self._reverse, self._permuted)
                for sentence in sentences]
         if self._use_char_inputs:
-            chars_ids = [self.vocab.encode_chars(sentence, self._reverse)
+            chars_ids = [self.vocab.encode_chars(sentence, self._reverse, self._permuted)
                      for sentence in sentences]
         else:
             chars_ids = [None] * len(ids)
@@ -513,6 +622,7 @@ class LMDataset(object):
     def vocab(self):
         return self._vocab
 
+
 class BidirectionalLMDataset(object):
     def __init__(self, filepattern, vocab, test=False, shuffle_on_load=False):
         '''
@@ -540,12 +650,16 @@ class BidirectionalLMDataset(object):
 
             yield X
 
+
 # NOTE(feiga): Dataset for more directions beyond bidirectionial lstm
 class MultidirectionalLMDataset(object):
-    def __init__(self, filepattern, vocab, test=False, shuffle_on_load=False):
+    def __init__(self, filepattern, vocab, permute_number, test=False, shuffle_on_load=False):
         '''
         multidirectional version of LMDataset
         '''
+        # NOTE(lijun): add permute number
+        self._permute_number = permute_number
+
         # NOTE(feiga): More dataset
         self._data_forward = LMDataset(
             filepattern, vocab, reverse=False, test=test,
@@ -553,39 +667,145 @@ class MultidirectionalLMDataset(object):
         self._data_reverse = LMDataset(
             filepattern, vocab, reverse=True, test=test,
             shuffle_on_load=shuffle_on_load)
-        # TODO(feiga):
-        self._data_permuted1 = LMDataset(
-            filepattern, vocab, reverse=False, permuted='inward', test=test,
-            shuffle_on_load=shuffle_on_load)
-        self._data_permuted2 = LMDataset(
-            filepattern, vocab, reverse=False, permuted='outward', test=test,
-            shuffle_on_load=shuffle_on_load)
+        # TODO(lijun):
+        if permute_number == 4:
+            # TODO(feiga):
+            self._data_permuted1 = LMDataset(
+                filepattern, vocab, reverse=False, permuted='inward', test=test,
+                shuffle_on_load=shuffle_on_load)
+            self._data_permuted2 = LMDataset(
+                filepattern, vocab, reverse=False, permuted='outward', test=test,
+                shuffle_on_load=shuffle_on_load)
+        elif permute_number == 6:
+            self._data_permuted1 = LMDataset(
+                filepattern, vocab, reverse=False, permuted='inward', test=test,
+                shuffle_on_load=shuffle_on_load)
+            self._data_permuted2 = LMDataset(
+                filepattern, vocab, reverse=False, permuted='outward', test=test,
+                shuffle_on_load=shuffle_on_load)
+            self._data_permuted3 = LMDataset(
+                filepattern, vocab, reverse=False, permuted="skip2forward", test=test,
+                shuffle_on_load=shuffle_on_load)
+            self._data_permuted4 = LMDataset(
+                filepattern, vocab, reverse=False, permuted="skip2backward", test=test,
+                shuffle_on_load=shuffle_on_load)
+        elif permute_number == 8:
+            self._data_permuted1 = LMDataset(
+                filepattern, vocab, reverse=False, permuted='inward', test=test,
+                shuffle_on_load=shuffle_on_load)
+            self._data_permuted2 = LMDataset(
+                filepattern, vocab, reverse=False, permuted='outward', test=test,
+                shuffle_on_load=shuffle_on_load)
+            self._data_permuted3 = LMDataset(
+                filepattern, vocab, reverse=False, permuted="skip2forward", test=test,
+                shuffle_on_load=shuffle_on_load)
+            self._data_permuted4 = LMDataset(
+                filepattern, vocab, reverse=False, permuted="skip2backward", test=test,
+                shuffle_on_load=shuffle_on_load)
+            self._data_permuted5 = LMDataset(
+                filepattern, vocab, reverse=False, permuted="skip3forward", test=test,
+                shuffle_on_load=shuffle_on_load)
+            self._data_permuted6 = LMDataset(
+                filepattern, vocab, reverse=False, permuted="skip3backward", test=test,
+                shuffle_on_load=shuffle_on_load)
+        else:
+            raise ValueError('Not implemented.')
 
     def iter_batches(self, batch_size, num_steps):
         max_word_length = self._data_forward.max_word_length
 
-        # NOTE(feiga): get batches from every datasets
-        # TODO(feiga): for X, Xr, Xp1, Xp2...
-        for X, Xr, Xp1, Xp2 in zip(
-            _get_batch(self._data_forward.get_sentence(), batch_size,
-                      num_steps, max_word_length),
-            _get_batch(self._data_reverse.get_sentence(), batch_size,
-                      num_steps, max_word_length),
-            # Note(feiga):
-            # add for permuted data
-            _get_batch(self._data_permuted1.get_sentence(), batch_size, 
-                      num_steps, max_word_length),
-            _get_batch(self._data_permuted2.get_sentence(), batch_size, 
-                     num_steps, max_word_length)
-            ):
+        # NOTE (lijun): different permute number to combine data
 
+        if self._permute_number == 4:
+            # NOTE(feiga): get batches from every datasets
             # TODO(feiga): for X, Xr, Xp1, Xp2...
-            for k, v in Xr.items():
-                X[k + '_reverse'] = v
-            for k, v in Xp1.items():
-                X[k + '_permuted1'] = v
-            for k, v in Xp2.items():
-                X[k + '_permuted2'] = v
+            for X, Xr, Xp1, Xp2 in zip(
+                _get_batch(self._data_forward.get_sentence(), batch_size,
+                          num_steps, max_word_length),
+                _get_batch(self._data_reverse.get_sentence(), batch_size,
+                          num_steps, max_word_length),
+                # Note(feiga):
+                # add for permuted data
+                _get_batch(self._data_permuted1.get_sentence(), batch_size,
+                          num_steps, max_word_length),
+                _get_batch(self._data_permuted2.get_sentence(), batch_size,
+                         num_steps, max_word_length)
+            ):
+                # TODO(feiga): for X, Xr, Xp1, Xp2...
+                for k, v in Xr.items():
+                    X[k + '_reverse'] = v
+                for k, v in Xp1.items():
+                    X[k + '_permuted1'] = v
+                for k, v in Xp2.items():
+                    X[k + '_permuted2'] = v
 
-            yield X
+                yield X
+
+        elif self._permute_number == 6:
+            for X, Xr, Xp1, Xp2, Xp3, Xp4 in zip(
+                    _get_batch(self._data_forward.get_sentence(), batch_size,
+                               num_steps, max_word_length),
+                    _get_batch(self._data_reverse.get_sentence(), batch_size,
+                               num_steps, max_word_length),
+                    # Note(lijun): add permute3 and permute4
+                    _get_batch(self._data_permuted1.get_sentence(), batch_size,
+                               num_steps, max_word_length),
+                    _get_batch(self._data_permuted2.get_sentence(), batch_size,
+                               num_steps, max_word_length),
+                    _get_batch(self._data_permuted3.get_sentence(), batch_size,
+                               num_steps, max_word_length),
+                    _get_batch(self._data_permuted4.get_sentence(), batch_size,
+                               num_steps, max_word_length)
+            ):
+                for k, v in Xr.items():
+                    X[k + '_reverse'] = v
+                for k, v in Xp1.items():
+                    X[k + '_permuted1'] = v
+                for k, v in Xp2.items():
+                    X[k + '_permuted2'] = v
+                for k, v in Xp3.items():
+                    X[k + '_permuted3'] = v
+                for k, v in Xp4.items():
+                    X[k + '_permuted4'] = v
+
+                yield X
+
+        elif self._permute_number == 8:
+            for X, Xr, Xp1, Xp2, Xp3, Xp4, Xp5, Xp6 in zip(
+                    _get_batch(self._data_forward.get_sentence(), batch_size,
+                               num_steps, max_word_length),
+                    _get_batch(self._data_reverse.get_sentence(), batch_size,
+                               num_steps, max_word_length),
+                    # Note(lijun): add permute3, 4, 5, 6
+                    _get_batch(self._data_permuted1.get_sentence(), batch_size,
+                               num_steps, max_word_length),
+                    _get_batch(self._data_permuted2.get_sentence(), batch_size,
+                               num_steps, max_word_length),
+                    _get_batch(self._data_permuted3.get_sentence(), batch_size,
+                               num_steps, max_word_length),
+                    _get_batch(self._data_permuted4.get_sentence(), batch_size,
+                               num_steps, max_word_length),
+                    _get_batch(self._data_permuted5.get_sentence(), batch_size,
+                               num_steps, max_word_length),
+                    _get_batch(self._data_permuted6.get_sentence(), batch_size,
+                               num_steps, max_word_length)
+            ):
+                for k, v in Xr.items():
+                    X[k + '_reverse'] = v
+                for k, v in Xp1.items():
+                    X[k + '_permuted1'] = v
+                for k, v in Xp2.items():
+                    X[k + '_permuted2'] = v
+                for k, v in Xp3.items():
+                    X[k + '_permuted3'] = v
+                for k, v in Xp4.items():
+                    X[k + '_permuted4'] = v
+                for k, v in Xp5.items():
+                    X[k + '_permuted5'] = v
+                for k, v in Xp6.items():
+                    X[k + '_permuted6'] = v
+
+                yield X
+        else:
+            raise ValueError('Not implemented.')
 
