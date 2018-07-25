@@ -15,6 +15,8 @@ def main(args):
     batch_size = 128  # batch size for each GPU
     n_gpus = args.n_gpus
     permute_number = args.permute_number
+    dim = args.dim
+    projection_dim = args.projection_dim
 
     # number of tokens in training data (this for 1B Word Benchmark)
     n_train_tokens = 768648884
@@ -34,17 +36,17 @@ def main(args):
        [6, 512],
        [7, 1024]],
       'max_characters_per_token': 50,
-      'n_characters': 261,
+      'n_characters': 267,  # NOTE (lijun): add more character tokens
       'n_highway': 2},
     
      'dropout': 0.1,
     
      'lstm': {
       'cell_clip': 3,
-      'dim': 2048, # NOTE(feiga): halved dimensions comparing with ELMo
+      'dim': args.dim,  # NOTE(feiga): halved dimensions comparing with ELMo (default=2048)
       'n_layers': 2,
       'proj_clip': 3,
-      'projection_dim': 256, # NOTE(feiga): halved dimensions comparing with ELMo
+      'projection_dim': args.projection_dim,  # NOTE(feiga): halved dimensions comparing with ELMo (default=256)
       'use_skip_connections': True},
     
      'all_clip_norm_val': 10.0,
@@ -73,6 +75,8 @@ if __name__ == '__main__':
     parser.add_argument('--train_prefix', help='Prefix for train files')
     parser.add_argument('--n_gpus', type=int, default=4, help='Number of gpu cards.')
     parser.add_argument('--permute_number', type=int, default=4, help='Number of permutations.')
+    parser.add_argument('--dim', type=int, default=2048, help='Input dimension.')
+    parser.add_argument('--projection_dim', type=int, default=256, help='Hidden dimension.')
 
     args = parser.parse_args()
     main(args)
