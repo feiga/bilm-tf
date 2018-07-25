@@ -12,4 +12,4 @@ export PYTHONPATH=$REMOTE_CODE_PATH:$PYTHONPATH
 python3 $REMOTE_CODE_PATH/bin/train_elmo.py \
     --train_prefix=$DATA_PATH/1-billion-word-language-modeling-benchmark-r13output/training-monolingual.tokenized.shuffled/* \
     --vocab_file=$DATA_PATH/vocab-2016-09-10.txt \
-    --save_dir=$DATA_PATH/model
+    --save_dir=$REMOTE_CODE_PATH/model

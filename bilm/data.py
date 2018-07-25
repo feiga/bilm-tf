@@ -425,7 +425,7 @@ class LMDataset(object):
         """Randomly select a file and read it."""
         if self._test:
             if len(self._all_shards) == 0:
-                # we've loaded all the data
+                # we've loaded all the data 
                 # this will propogate up to the generator in get_batch
                 # and stop iterating
                 raise StopIteration
