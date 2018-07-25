@@ -179,6 +179,14 @@ class Vocabulary(object):
                     return np.array([self.sos] + word_ids + [self.mos], dtype=np.int32)
                 elif permuted == 'outward':
                     return np.array([self.mos] + word_ids + [self.sos], dtype=np.int32)
+                elif permuted == 'skip2forward':
+                    return np.array([self.s2s] + word_ids + [self.s2e], dtype=np.int32)
+                elif permuted == 'skip2backward':
+                    return np.array([self.s2e] + word_ids + [self.s2s], dtype=np.int32)
+                elif permuted == 'skip3forward':
+                    return np.array([self.s3s] + word_ids + [self.s3e], dtype=np.int32)
+                elif permuted == 'skip3backward':
+                    return np.array([self.s3e] + word_ids + [self.s3s], dtype=np.int32)
                 else:
                     raise ValueError("Not implemented")
             else:
