@@ -459,7 +459,7 @@ def _permute_list(list, permute_pattern):
         for k in range(i, len(list), 2):
             permuted.append(list[k])
         for k in range(j, len(list), 2):
-            permuted.append(k)
+            permuted.append(list[k])
     elif permute_pattern == "skip2backward":
         i = len(list) - 1
         j = len(list) - 2
@@ -482,7 +482,7 @@ def _permute_list(list, permute_pattern):
         j = len(list) - 2
         k = len(list) - 3
         for m in range(i, -1, -3):
-            permuted.append(list[i])
+            permuted.append(list[m])
         for m in range(j, -1, -3):
             permuted.append(list[m])
         for m in range(k, -1, -3):
