@@ -57,6 +57,7 @@ class LanguageModel(object):
         # NOTE(feiga): add omnidirectional and more options
         self.bidirectional = options.get('bidirectional', False)
         self.multidirectional = options.get('multidirectional', False)
+        self.permute_number = options.get('permute_number', 2)
 
         # use word or char inputs?
         self.char_inputs = 'char_cnn' in self.options
@@ -117,6 +118,41 @@ class LanguageModel(object):
                     self.embedding_weights, self.token_ids_permuted1)
                 self.embedding_permuted2 = tf.nn.embedding_lookup(
                     self.embedding_weights, self.token_ids_permuted2)
+             if self.permute_number == 6:
+                 self.token_ids_permuted3 = tf.placeholder(DTYPE_INT,
+                                                           shape=(batch_size, unroll_steps),
+                                                           name='token_ids_permuted3')
+                 self.token_ids_permuted4 = tf.placeholder(DTYPE_INT,
+                                                           shape=(batch_size, unroll_steps),
+                                                           name='token_ids_permuted4')
+                 with tf.device("/cpu:0"):
+                     self.embedding_permuted3 = tf.nn.embedding_lookup(
+                         self.embedding_weights, self.token_ids_permuted3)
+                     self.embedding_permuted4 = tf.nn.embedding_lookup(
+                         self.embedding_weights, self.token_ids_permuted4)
+             elif self.permute_number == 8:
+                 self.token_ids_permuted3 = tf.placeholder(DTYPE_INT,
+                                                           shape=(batch_size, unroll_steps),
+                                                           name='token_ids_permuted3')
+                 self.token_ids_permuted4 = tf.placeholder(DTYPE_INT,
+                                                           shape=(batch_size, unroll_steps),
+                                                           name='token_ids_permuted4')
+                 self.token_ids_permuted5 = tf.placeholder(DTYPE_INT,
+                                                           shape=(batch_size, unroll_steps),
+                                                           name='token_ids_permuted5')
+                 self.token_ids_permuted6 = tf.placeholder(DTYPE_INT,
+                                                           shape=(batch_size, unroll_steps),
+                                                           name='token_ids_permuted6')
+                 with tf.device("/cpu:0"):
+                     self.embedding_permuted3 = tf.nn.embedding_lookup(
+                         self.embedding_weights, self.token_ids_permuted3)
+                     self.embedding_permuted4 = tf.nn.embedding_lookup(
+                         self.embedding_weights, self.token_ids_permuted4)
+                     self.embedding_permuted5 = tf.nn.embedding_lookup(
+                         self.embedding_weights, self.token_ids_permuted5)
+                     self.embedding_permuted6 = tf.nn.embedding_lookup(
+                         self.embedding_weights, self.token_ids_permuted6)
+
 
     def _build_word_char_embeddings(self):
         '''
@@ -194,6 +230,39 @@ class LanguageModel(object):
                                    name='tokens_characters_permuted2')
                 self.char_embedding_permuted2 = tf.nn.embedding_lookup(
                     self.embedding_weights, self.tokens_characters_permuted2)
+                if self.permute_number == 6:
+                    self.tokens_characters_permuted3 = tf.placeholder(DTYPE_INT,
+                                                                      shape=(batch_size, unroll_steps, max_chars),
+                                                                      name='tokens_characters_permuted3')
+                    self.char_embedding_permuted3 = tf.nn.embedding_lookup(
+                        self.embedding_weights, self.tokens_characters_permuted3)
+                    self.tokens_characters_permuted4 = tf.placeholder(DTYPE_INT,
+                                                                      shape=(batch_size, unroll_steps, max_chars),
+                                                                      name='tokens_characters_permuted4')
+                    self.char_embedding_permuted4 = tf.nn.embedding_lookup(
+                        self.embedding_weights, self.tokens_characters_permuted4)
+                elif self.permute_number == 8:
+                    self.tokens_characters_permuted3 = tf.placeholder(DTYPE_INT,
+                                                                      shape=(batch_size, unroll_steps, max_chars),
+                                                                      name='tokens_characters_permuted3')
+                    self.char_embedding_permuted3 = tf.nn.embedding_lookup(
+                        self.embedding_weights, self.tokens_characters_permuted3)
+                    self.tokens_characters_permuted4 = tf.placeholder(DTYPE_INT,
+                                                                      shape=(batch_size, unroll_steps, max_chars),
+                                                                      name='tokens_characters_permuted4')
+                    self.char_embedding_permuted4 = tf.nn.embedding_lookup(
+                        self.embedding_weights, self.tokens_characters_permuted4)
+                    self.tokens_characters_permuted5 = tf.placeholder(DTYPE_INT,
+                                                                      shape=(batch_size, unroll_steps, max_chars),
+                                                                      name='tokens_characters_permuted5')
+                    self.char_embedding_permuted5 = tf.nn.embedding_lookup(
+                        self.embedding_weights, self.tokens_characters_permuted5)
+                    self.tokens_characters_permuted6 = tf.placeholder(DTYPE_INT,
+                                                                      shape=(batch_size, unroll_steps, max_chars),
+                                                                      name='tokens_characters_permuted6')
+                    self.char_embedding_permuted6 = tf.nn.embedding_lookup(
+                        self.embedding_weights, self.tokens_characters_permuted6)
+
 
 
         # the convolutions
@@ -260,6 +329,20 @@ class LanguageModel(object):
                 self.char_embedding_permuted1, True)
             embedding_permuted2 = make_convolutions(
                 self.char_embedding_permuted2, True)
+            if self.permute_number == 6:
+                embedding_permuted3 = make_convolutions(
+                    self.char_embedding_permuted3, True)
+                embedding_permuted4 = make_convolutions(
+                    self.char_embedding_permuted4, True)
+            elif self.permute_number == 8:
+                embedding_permuted3 = make_convolutions(
+                    self.char_embedding_permuted3, True)
+                embedding_permuted4 = make_convolutions(
+                    self.char_embedding_permuted4, True)
+                embedding_permuted5 = make_convolutions(
+                    self.char_embedding_permuted5, True)
+                embedding_permuted6 = make_convolutions(
+                    self.char_embedding_permuted6, True)
 
         # for highway and projection layers:
         #   reshape from (batch_size, n_tokens, dim) to
@@ -278,6 +361,20 @@ class LanguageModel(object):
                     [-1, n_filters])
                 embedding_permuted2 = tf.reshape(embedding_permuted2,
                     [-1, n_filters])
+                if self.permute_number == 6:
+                    embedding_permuted3 = tf.reshape(embedding_permuted3,
+                                                     [-1, n_filters])
+                    embedding_permuted4 = tf.reshape(embedding_permuted4,
+                                                     [-1, n_filters])
+                elif self.permute_number == 8:
+                    embedding_permuted3 = tf.reshape(embedding_permuted3,
+                                                     [-1, n_filters])
+                    embedding_permuted4 = tf.reshape(embedding_permuted4,
+                                                     [-1, n_filters])
+                    embedding_permuted5 = tf.reshape(embedding_permuted5,
+                                                     [-1, n_filters])
+                    embedding_permuted6 = tf.reshape(embedding_permuted6,
+                                                     [-1, n_filters])
 
         # set up weights for projection
         if use_proj:
@@ -338,6 +435,26 @@ class LanguageModel(object):
                     embedding_permuted2 = high(embedding_permuted2,
                                              W_carry, b_carry,
                                              W_transform, b_transform)
+                    if self.permute_number == 6:
+                        embedding_permuted3 = high(embedding_permuted3,
+                                                   W_carry, b_carry,
+                                                   W_transform, b_transform)
+                        embedding_permuted4 = high(embedding_permuted4,
+                                                   W_carry, b_carry,
+                                                   W_transform, b_transform)
+                    elif self.permute_number == 8:
+                        embedding_permuted3 = high(embedding_permuted3,
+                                                   W_carry, b_carry,
+                                                   W_transform, b_transform)
+                        embedding_permuted4 = high(embedding_permuted4,
+                                                   W_carry, b_carry,
+                                                   W_transform, b_transform)
+                        embedding_permuted5 = high(embedding_permuted5,
+                                                   W_carry, b_carry,
+                                                   W_transform, b_transform)
+                        embedding_permuted6 = high(embedding_permuted6,
+                                                   W_carry, b_carry,
+                                                   W_transform, b_transform)
                 
                 self.token_embedding_layers.append(
                     tf.reshape(embedding, 
@@ -356,6 +473,20 @@ class LanguageModel(object):
                     + b_proj_cnn
                 embedding_permuted2 = tf.matmul(embedding_permuted2, W_proj_cnn) \
                     + b_proj_cnn
+                if self.permute_number == 6:
+                    embedding_permuted3 = tf.matmul(embedding_permuted3, W_proj_cnn) \
+                                          + b_proj_cnn
+                    embedding_permuted4 = tf.matmul(embedding_permuted4, W_proj_cnn) \
+                                          + b_proj_cnn
+                elif self.permute_number == 8:
+                    embedding_permuted3 = tf.matmul(embedding_permuted3, W_proj_cnn) \
+                                          + b_proj_cnn
+                    embedding_permuted4 = tf.matmul(embedding_permuted4, W_proj_cnn) \
+                                          + b_proj_cnn
+                    embedding_permuted5 = tf.matmul(embedding_permuted5, W_proj_cnn) \
+                                          + b_proj_cnn
+                    embedding_permuted6 = tf.matmul(embedding_permuted6, W_proj_cnn) \
+                                          + b_proj_cnn
 
             self.token_embedding_layers.append(
                 tf.reshape(embedding,
@@ -372,6 +503,14 @@ class LanguageModel(object):
             if self.multidirectional:
                 embedding_permuted1 = tf.reshape(embedding_permuted1, shp)
                 embedding_permuted2 = tf.reshape(embedding_permuted2, shp)
+                if self.permute_number == 6:
+                    embedding_permuted3 = tf.reshape(embedding_permuted3, shp)
+                    embedding_permuted4 = tf.reshape(embedding_permuted4, shp)
+                elif self.permute_number == 8:
+                    embedding_permuted3 = tf.reshape(embedding_permuted3, shp)
+                    embedding_permuted4 = tf.reshape(embedding_permuted4, shp)
+                    embedding_permuted5 = tf.reshape(embedding_permuted5, shp)
+                    embedding_permuted6 = tf.reshape(embedding_permuted6, shp)
 
         # at last assign attributes for remainder of the model
         self.embedding = embedding
@@ -381,6 +520,14 @@ class LanguageModel(object):
         if self.multidirectional:
             self.embedding_permuted1 = embedding_permuted1
             self.embedding_permuted2 = embedding_permuted2
+            if self.permute_number == 6:
+                self.embedding_permuted3 = embedding_permuted3
+                self.embedding_permuted4 = embedding_permuted4
+            elif self.permute_number == 8:
+                self.embedding_permuted3 = embedding_permuted3
+                self.embedding_permuted4 = embedding_permuted4
+                self.embedding_permuted5 = embedding_permuted5
+                self.embedding_permuted6 = embedding_permuted6
 
     def _build(self):
         # size of input options
@@ -410,6 +557,15 @@ class LanguageModel(object):
         # NOTE(feiga): add for multidirectional
         if self.multidirectional and self.bidirectional:
             lstm_inputs = [self.embedding, self.embedding_reverse, self.embedding_permuted1, self.embedding_permuted2]
+            if self.permute_number == 6:
+                lstm_inputs = [self.embedding, self.embedding_reverse,
+                               self.embedding_permuted1, self.embedding_permuted2,
+                               self.embedding_permuted3, self.embedding_permuted4]
+            elif self.permute_number == 8:
+                lstm_inputs = [self.embedding, self.embedding_reverse,
+                               self.embedding_permuted1, self.embedding_permuted2,
+                               self.embedding_permuted3, self.embedding_permuted4,
+                               self.embedding_permuted5, self.embedding_permuted6]
         elif self.bidirectional:
             lstm_inputs = [self.embedding, self.embedding_reverse]
         else:
@@ -525,6 +681,14 @@ class LanguageModel(object):
         if self.multidirectional:
             self.next_token_id_permuted1 = _get_next_token_placeholders('_permuted1')
             self.next_token_id_permuted2 = _get_next_token_placeholders('_permuted2')
+            if self.permute_number == 6:
+                self.next_token_id_permuted3 = _get_next_token_placeholders('_permuted3')
+                self.next_token_id_permuted4 = _get_next_token_placeholders('_permuted4')
+            elif self.permute_number == 8:
+                self.next_token_id_permuted3 = _get_next_token_placeholders('_permuted3')
+                self.next_token_id_permuted4 = _get_next_token_placeholders('_permuted4')
+                self.next_token_id_permuted5 = _get_next_token_placeholders('_permuted5')
+                self.next_token_id_permuted6 = _get_next_token_placeholders('_permuted6')
 
         # DEFINE THE SOFTMAX VARIABLES
         # get the dimension of the softmax weights
@@ -558,6 +722,15 @@ class LanguageModel(object):
         # NOTE(feiga): add for multidirectional
         if self.multidirectional and self.bidirectional:
             next_ids = [self.next_token_id, self.next_token_id_reverse, self.next_token_id_permuted1, self.next_token_id_permuted2]
+            if self.permute_number == 6:
+                next_ids = [self.next_token_id, self.next_token_id_reverse,
+                            self.next_token_id_permuted1, self.next_token_id_permuted2,
+                            self.next_token_id_permuted3, self.next_token_id_permuted4]
+            elif self.permute_number == 8:
+                next_ids = [self.next_token_id, self.next_token_id_reverse,
+                            self.next_token_id_permuted1, self.next_token_id_permuted2,
+                            self.next_token_id_permuted3, self.next_token_id_permuted4,
+                            self.next_token_id_permuted5, self.next_token_id_permuted6]
         elif self.bidirectional:
             next_ids = [self.next_token_id, self.next_token_id_reverse]
         else:
@@ -597,12 +770,28 @@ class LanguageModel(object):
         # now make the total loss -- it's the mean of the individual losses
         if self.bidirectional and self.multidirectional:
             self.total_loss = 0.25 * (self.individual_losses[0]
-                                    + self.individual_losses[1]
-                                    + self.individual_losses[2]
-                                    + self.individual_losses[3])
+                                      + self.individual_losses[1]
+                                      + self.individual_losses[2]
+                                      + self.individual_losses[3])
+            if self.permute_number == 6:
+                self.total_loss = 1./6. * (self.individual_losses[0]
+                                           + self.individual_losses[1]
+                                           + self.individual_losses[2]
+                                           + self.individual_losses[3]
+                                           + self.individual_losses[4]
+                                           + self.individual_losses[5])
+            elif self.permute_number == 8:
+                self.total_loss = 1. / 8. * (self.individual_losses[0]
+                                             + self.individual_losses[1]
+                                             + self.individual_losses[2]
+                                             + self.individual_losses[3]
+                                             + self.individual_losses[4]
+                                             + self.individual_losses[5]
+                                             + self.individual_losses[6]
+                                             + self.individual_losses[7])
         if self.bidirectional:
             self.total_loss = 0.5 * (self.individual_losses[0]
-                                    + self.individual_losses[1])
+                                     + self.individual_losses[1])
         else:
             self.total_loss = self.individual_losses[0]
 
@@ -702,6 +891,7 @@ def summary_gradient_updates(grads, opt, lr):
 
     return ret
 
+
 def _deduplicate_indexed_slices(values, indices):
     """Sums `values` associated with any non-unique `indices`.
     Args:
@@ -721,7 +911,8 @@ def _deduplicate_indexed_slices(values, indices):
 
 
 # NOTE(feiga): add multidirectional
-def _get_feed_dict_from_X(X, start, end, model, char_inputs, bidirectional, multidirectional):
+# NOTE(lijun): ad more permute patten
+def _get_feed_dict_from_X(X, start, end, model, char_inputs, bidirectional, multidirectional, permute_number):
     feed_dict = {}
     if not char_inputs:
         token_ids = X['token_ids'][start:end]
@@ -745,11 +936,39 @@ def _get_feed_dict_from_X(X, start, end, model, char_inputs, bidirectional, mult
                 X['token_ids_permuted1'][start:end]
             feed_dict[model.token_ids_permuted2] = \
                 X['token_ids_permuted2'][start:end]
+            if permute_number == 6:
+                feed_dict[model.token_ids_permuted3] = \
+                    X['token_ids_permuted3'][start:end]
+                feed_dict[model.token_ids_permuted4] = \
+                    X['token_ids_permuted4'][start:end]
+            elif permute_number == 8:
+                feed_dict[model.token_ids_permuted3] = \
+                    X['token_ids_permuted3'][start:end]
+                feed_dict[model.token_ids_permuted4] = \
+                    X['token_ids_permuted4'][start:end]
+                feed_dict[model.token_ids_permuted5] = \
+                    X['token_ids_permuted5'][start:end]
+                feed_dict[model.token_ids_permuted6] = \
+                    X['token_ids_permuted6'][start:end]
         else:
             feed_dict[model.tokens_characters_permuted1] = \
                 X['tokens_characters_permuted1'][start:end]
             feed_dict[model.tokens_characters_permuted2] = \
                 X['tokens_characters_permuted2'][start:end]
+            if permute_number == 6:
+                feed_dict[model.tokens_characters_permuted3] = \
+                    X['tokens_characters_permuted3'][start:end]
+                feed_dict[model.tokens_characters_permuted4] = \
+                    X['tokens_characters_permuted4'][start:end]
+            elif permute_number == 8:
+                feed_dict[model.tokens_characters_permuted3] = \
+                    X['tokens_characters_permuted3'][start:end]
+                feed_dict[model.tokens_characters_permuted4] = \
+                    X['tokens_characters_permuted4'][start:end]
+                feed_dict[model.tokens_characters_permuted5] = \
+                    X['tokens_characters_permuted5'][start:end]
+                feed_dict[model.tokens_characters_permuted6] = \
+                    X['tokens_characters_permuted6'][start:end]
     # now the targets with weights
     next_id_placeholders = [[model.next_token_id, '']]
     if bidirectional:
@@ -758,6 +977,14 @@ def _get_feed_dict_from_X(X, start, end, model, char_inputs, bidirectional, mult
     if multidirectional:
         next_id_placeholders.append([model.next_token_id_permuted1, '_permuted1'])
         next_id_placeholders.append([model.next_token_id_permuted2, '_permuted2'])
+        if permute_number == 6:
+            next_id_placeholders.append([model.next_token_id_permuted3, '_permuted3'])
+            next_id_placeholders.append([model.next_token_id_permuted4, '_permuted4'])
+        elif permute_number == 8:
+            next_id_placeholders.append([model.next_token_id_permuted1, '_permuted3'])
+            next_id_placeholders.append([model.next_token_id_permuted2, '_permuted4'])
+            next_id_placeholders.append([model.next_token_id_permuted1, '_permuted5'])
+            next_id_placeholders.append([model.next_token_id_permuted2, '_permuted6'])
 
     for id_placeholder, suffix in next_id_placeholders:
         name = 'next_token_id' + suffix
@@ -766,7 +993,7 @@ def _get_feed_dict_from_X(X, start, end, model, char_inputs, bidirectional, mult
     return feed_dict
 
 
-def train(options, data, n_gpus, tf_save_dir, tf_log_dir,
+def train(options, data, n_gpus, tf_save_dir, tf_log_dir, permute_number=4,
           restart_ckpt_file=None):
 
     # not restarting so save the options
@@ -937,6 +1164,38 @@ def train(options, data, n_gpus, tf_save_dir, tf_log_dir,
                         np.zeros([batch_size, unroll_steps], dtype=np.int64)
                     for model in models
                 })
+                if permute_number == 6:
+                    feed_dict.update({
+                        model.token_ids_permuted3:
+                            np.zeros([batch_size, unroll_steps], dtype=np.int64)
+                        for model in models
+                    })
+                    feed_dict.update({
+                        model.token_ids_permuted4:
+                            np.zeros([batch_size, unroll_steps], dtype=np.int64)
+                        for model in models
+                    })
+                elif permute_number == 8:
+                    feed_dict.update({
+                        model.token_ids_permuted3:
+                            np.zeros([batch_size, unroll_steps], dtype=np.int64)
+                        for model in models
+                    })
+                    feed_dict.update({
+                        model.token_ids_permuted4:
+                            np.zeros([batch_size, unroll_steps], dtype=np.int64)
+                        for model in models
+                    })
+                    feed_dict.update({
+                        model.token_ids_permuted5:
+                            np.zeros([batch_size, unroll_steps], dtype=np.int64)
+                        for model in models
+                    })
+                    feed_dict.update({
+                        model.token_ids_permuted6:
+                            np.zeros([batch_size, unroll_steps], dtype=np.int64)
+                        for model in models
+                    })
             else:
                 feed_dict.update({
                     model.tokens_characters_permuted1:
@@ -950,6 +1209,44 @@ def train(options, data, n_gpus, tf_save_dir, tf_log_dir,
                                  dtype=np.int32)
                     for model in models
                 })
+                if permute_number == 6:
+                    feed_dict.update({
+                        model.tokens_characters_permuted3:
+                            np.zeros([batch_size, unroll_steps, max_chars],
+                                     dtype=np.int32)
+                        for model in models
+                    })
+                    feed_dict.update({
+                        model.tokens_characters_permuted4:
+                            np.zeros([batch_size, unroll_steps, max_chars],
+                                     dtype=np.int32)
+                        for model in models
+                    })
+                elif permute_number == 8:
+                    feed_dict.update({
+                        model.tokens_characters_permuted3:
+                            np.zeros([batch_size, unroll_steps, max_chars],
+                                     dtype=np.int32)
+                        for model in models
+                    })
+                    feed_dict.update({
+                        model.tokens_characters_permuted4:
+                            np.zeros([batch_size, unroll_steps, max_chars],
+                                     dtype=np.int32)
+                        for model in models
+                    })
+                    feed_dict.update({
+                        model.tokens_characters_permuted3:
+                            np.zeros([batch_size, unroll_steps, max_chars],
+                                     dtype=np.int32)
+                        for model in models
+                    })
+                    feed_dict.update({
+                        model.tokens_characters_permuted4:
+                            np.zeros([batch_size, unroll_steps, max_chars],
+                                     dtype=np.int32)
+                        for model in models
+                    })
 
         init_state_values = sess.run(init_state_tensors, feed_dict=feed_dict)
 
@@ -968,7 +1265,7 @@ def train(options, data, n_gpus, tf_save_dir, tf_log_dir,
 
                 feed_dict.update(
                     _get_feed_dict_from_X(X, start, end, model,
-                                          char_inputs, bidirectional, multidirectional)
+                                          char_inputs, bidirectional, multidirectional, permute_number)
                 )
 
             # This runs the train_op, summaries and the "final_state_tensors"
@@ -1072,7 +1369,7 @@ def clip_grads(grads, options, do_summaries, global_step):
     return ret, summary_ops
 
 
-def test(options, ckpt_file, data, batch_size=256):
+def test(options, ckpt_file, data, batch_size=256, permute_number=4):
     '''
     Get the test set perplexity!
     '''
@@ -1120,7 +1417,33 @@ def test(options, ckpt_file, data, batch_size=256):
                 feed_dict.update({
                     model.token_ids_permuted2:
                         np.zeros([batch_size, unroll_steps], dtype=np.int64)
-                })  
+                })
+                if permute_number == 6:
+                    feed_dict.update({
+                        model.token_ids_permuted3:
+                            np.zeros([batch_size, unroll_steps], dtype=np.int64)
+                    })
+                    feed_dict.update({
+                        model.token_ids_permuted4:
+                            np.zeros([batch_size, unroll_steps], dtype=np.int64)
+                    })
+                elif permute_number == 8:
+                    feed_dict.update({
+                        model.token_ids_permuted3:
+                            np.zeros([batch_size, unroll_steps], dtype=np.int64)
+                    })
+                    feed_dict.update({
+                        model.token_ids_permuted4:
+                            np.zeros([batch_size, unroll_steps], dtype=np.int64)
+                    })
+                    feed_dict.update({
+                        model.token_ids_permuted5:
+                            np.zeros([batch_size, unroll_steps], dtype=np.int64)
+                    })
+                    feed_dict.update({
+                        model.token_ids_permuted6:
+                            np.zeros([batch_size, unroll_steps], dtype=np.int64)
+                    })
         else:
             feed_dict = {
                 model.tokens_characters:
@@ -1144,6 +1467,38 @@ def test(options, ckpt_file, data, batch_size=256):
                         np.zeros([batch_size, unroll_steps, max_chars],
                             dtype=np.int32)
                 })
+                if permute_number == 6:
+                    feed_dict.update({
+                        model.tokens_characters_permuted3:
+                            np.zeros([batch_size, unroll_steps, max_chars],
+                                     dtype=np.int32)
+                    })
+                    feed_dict.update({
+                        model.tokens_characters_permuted4:
+                            np.zeros([batch_size, unroll_steps, max_chars],
+                                     dtype=np.int32)
+                    })
+                elif permute_number == 8:
+                    feed_dict.update({
+                        model.tokens_characters_permuted3:
+                            np.zeros([batch_size, unroll_steps, max_chars],
+                                     dtype=np.int32)
+                    })
+                    feed_dict.update({
+                        model.tokens_characters_permuted4:
+                            np.zeros([batch_size, unroll_steps, max_chars],
+                                     dtype=np.int32)
+                    })
+                    feed_dict.update({
+                        model.tokens_characters_permuted5:
+                            np.zeros([batch_size, unroll_steps, max_chars],
+                                     dtype=np.int32)
+                    })
+                    feed_dict.update({
+                        model.tokens_characters_permuted6:
+                            np.zeros([batch_size, unroll_steps, max_chars],
+                                     dtype=np.int32)
+                    })
 
         init_state_values = sess.run(
             init_state_tensors,
@@ -1162,7 +1517,7 @@ def test(options, ckpt_file, data, batch_size=256):
 
             feed_dict.update(
                 _get_feed_dict_from_X(X, 0, X['token_ids'].shape[0], model, 
-                                          char_inputs, bidirectional, multidirectional)
+                                          char_inputs, bidirectional, multidirectional, permute_number)
             )
 
             ret = sess.run(
