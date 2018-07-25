@@ -1,0 +1,23 @@
+{
+  "jobName": "bilm_base",
+  "image": "apeterswu/tf12-py36",
+  "authFile": "",
+  "dataDir": "$PAI_DEFAULT_FS_URI/v-lijwu/",
+  "outputDir": "$PAI_DEFAULT_FS_URI/v-lijwu/output",
+  "codeDir": "$PAI_DEFAULT_FS_URI/v-lijwu/bilm-tf-master",
+  "virtualCluster": "vc1",
+  "gpuType": "",
+  "killAllOnCompletedTaskNumber": 0,
+  "retryCount": 0,
+  "taskRoles": [
+    {
+      "name": "try",
+      "taskNumber": 1,
+      "cpuNumber": 16,
+      "memoryMB": 49152,
+      "gpuNumber": 4,
+      "command": "sleep 1h & /bin/bash bilm-tf-master/train_pai.sh",
+      "portList": []
+    }
+  ]
+}

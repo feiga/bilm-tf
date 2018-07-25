@@ -1,6 +1,7 @@
 REMOTE_CODE_PATH=/hdfs/sdrgvc/v-lijwu/bilm-tf-master
 DATA_PATH=$REMOTE_CODE_PATH/data
 
+export PYTHONPATH=$REMOTE_CODE_PATH:$PYTHONPATH
 # sudo pip install h5py
 
 # export CUDA_VISIBLE_DEVICES=0,1,2
