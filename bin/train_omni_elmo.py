@@ -14,6 +14,7 @@ def main(args):
     # define the options
     batch_size = 128  # batch size for each GPU
     n_gpus = args.n_gpus
+    permute_number = args.permute_number
 
     # number of tokens in training data (this for 1B Word Benchmark)
     n_train_tokens = 768648884
@@ -21,6 +22,7 @@ def main(args):
     options = {
      'bidirectional': True,
      'multidirectional': True,
+     'permute_number': permute_number,
 
      'char_cnn': {'activation': 'relu',
       'embedding': {'dim': 16},
@@ -56,12 +58,12 @@ def main(args):
     }
 
     prefix = args.train_prefix
-    data = MultidirectionalLMDataset(prefix, vocab, test=False,
+    data = MultidirectionalLMDataset(prefix, vocab, permute_number, test=False,
                                       shuffle_on_load=True)
 
     tf_save_dir = args.save_dir
     tf_log_dir = args.save_dir
-    train(options, data, n_gpus, tf_save_dir, tf_log_dir)
+    train(options, data, n_gpus, tf_save_dir, tf_log_dir, permute_number)
 
 
 if __name__ == '__main__':
@@ -70,6 +72,7 @@ if __name__ == '__main__':
     parser.add_argument('--vocab_file', help='Vocabulary file')
     parser.add_argument('--train_prefix', help='Prefix for train files')
     parser.add_argument('--n_gpus', type=int, default=4, help='Number of gpu cards.')
+    parser.add_argument('--permute_number', type=int, default=4, help='Number of permutations.')
 
     args = parser.parse_args()
     main(args)

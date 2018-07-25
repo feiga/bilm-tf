@@ -2,7 +2,7 @@
 import argparse
 
 from bilm.training import test, load_options_latest_checkpoint, load_vocab
-from bilm.data import LMDataset, BidirectionalLMDataset
+from bilm.data import LMDataset, BidirectionalLMDataset, MultidirectionalLMDataset
 
 def main(args):
     options, ckpt_file = load_options_latest_checkpoint(args.save_dir)
@@ -21,12 +21,16 @@ def main(args):
         'shuffle_on_load': False,
     }
 
+    permute_number = options.get('permute_number', 4)
+
     if options.get('bidirectional'):
         data = BidirectionalLMDataset(test_prefix, vocab, **kwargs)
+    elif options.get('multidirectional'):
+        data = MultidirectionalLMDataset(test_prefix, vocab, permute_number, **kwargs)
     else:
         data = LMDataset(test_prefix, vocab, **kwargs)
 
-    test(options, ckpt_file, data, batch_size=args.batch_size)
+    test(options, ckpt_file, data, batch_size=args.batch_siz, permute_number=permute_number)
 
 
 if __name__ == '__main__':
