@@ -8,6 +8,8 @@ from bilm.data import BidirectionalLMDataset, MultidirectionalLMDataset
 
 
 def main(args):
+    options, ckpt_file = load_options_latest_checkpoint(args.save_dir)
+
     # load the vocab
     vocab = load_vocab(args.vocab_file, 50)
 
@@ -15,8 +17,6 @@ def main(args):
     batch_size = 128  # batch size for each GPU
     n_gpus = args.n_gpus
     permute_number = args.permute_number
-    dim = args.dim
-    projection_dim = args.projection_dim
 
     # number of tokens in training data (this for 1B Word Benchmark)
     n_train_tokens = 768648884
@@ -65,7 +65,9 @@ def main(args):
 
     tf_save_dir = args.save_dir
     tf_log_dir = args.save_dir
-    train(options, data, n_gpus, tf_save_dir, tf_log_dir, permute_number)
+    train(options, data, n_gpus, tf_save_dir, tf_log_dir, permute_number,
+          restart_ckpt_file=ckpt_file)
+    # if ckpt_file exists, reload to train
 
 
 if __name__ == '__main__':
