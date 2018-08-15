@@ -1,4 +1,4 @@
-
+import os
 import argparse
 
 import numpy as np
@@ -8,7 +8,9 @@ from bilm.data import BidirectionalLMDataset
 
 
 def main(args):
-    options, ckpt_file = load_options_latest_checkpoint(args.save_dir)
+    ckpt_file = None
+    if os.path.exists(args.save_dir):
+        options, ckpt_file = load_options_latest_checkpoint(args.save_dir)
 
     # load the vocab
     vocab = load_vocab(args.vocab_file, 50)
