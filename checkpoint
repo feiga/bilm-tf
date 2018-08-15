@@ -1,0 +1,2 @@
+model_checkpoint_path: "/hdfs/sdrgvc/v-lijwu/bilm-tf-master/model_omni/model.ckpt-750000"
+all_model_checkpoint_paths: "/hdfs/sdrgvc/v-lijwu/bilm-tf-master/model_omni/model.ckpt-750000"
