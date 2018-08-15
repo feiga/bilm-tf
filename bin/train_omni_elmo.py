@@ -63,7 +63,7 @@ def main(args):
 
     prefix = args.train_prefix
     data = MultidirectionalLMDataset(prefix, vocab, permute_number, test=False,
-                                      shuffle_on_load=True)
+                                     shuffle_on_load=True)
 
     tf_save_dir = args.save_dir
     tf_log_dir = args.save_dir
