@@ -9,7 +9,7 @@ from bilm.data import BidirectionalLMDataset, MultidirectionalLMDataset
 
 def main(args):
     ckpt_file = None
-    if os.path.exists(args.save_dir):
+    if os.path.exists(args.save_dir+'options.json'):
         options, ckpt_file = load_options_latest_checkpoint(args.save_dir)
 
     # load the vocab
